@@ -6,10 +6,11 @@ import logging
 
 logging.basicConfig(filename=config.LOGGING_FILE, level=logging.INFO)
 
-class SignalReader:
+class SignalReader():
     def __init__(self):
         self.api_key = ''
         self.url = ''
+        self.enabled = True
 
     def parse_signal(self, signal):
         raise NotImplementedError()
@@ -17,8 +18,8 @@ class SignalReader:
     def start_reader(self, exchange='', interval=5, signal_queue=None):
         if exchange:
             print('Started CryptSignal reader for {}'.format(exchange))
-            params = { 'api_key': self.api_key, 'exchange': exchange, 'interval': interval }
-            while True:                
+            params = { 'api_key': self.api_key, 'exchange': exchange, 'interval': interval }            
+            while self.enabled: 
                 signals = json.loads(requests.get(self.url, params=params).text)
                 signals = self.parse(signals)
                 if signals:
@@ -30,6 +31,10 @@ class SignalReader:
                 #else:
                 #    print 'No new signals at this time, waiting 5 minutes...'
                 time.sleep(301)
+                #time.sleep(10)
+
+    def stop_reader(self):
+        self.enabled = False
     
 class CryptoSignalsReader(SignalReader):
     def __init__(self):
