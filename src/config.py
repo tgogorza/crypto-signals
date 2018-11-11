@@ -1,0 +1,7 @@
+CRYPTO_SIGNALS_API = 'https://cryptoqualitysignals.com/api/getSignal/'
+CRYPTO_SIGNALS_API_KEY = 'FREE'
+
+THREE_COMMAS_API_KEY = '<YOUR_API_KEY>'
+THREE_COMMAS_API_SECRET = '<YOUR_SECRET_KEY>'
+
+LOGGING_FILE = 'log.txt'
