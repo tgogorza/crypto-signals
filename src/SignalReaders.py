@@ -20,18 +20,22 @@ class SignalReader():
             print('Started CryptSignal reader for {}'.format(exchange))
             params = { 'api_key': self.api_key, 'exchange': exchange, 'interval': interval }            
             while self.enabled: 
-                signals = json.loads(requests.get(self.url, params=params).text)
-                signals = self.parse(signals)
-                if signals:
-                    print('Signal received...')
-                    logging.info('Reading cryptoqualitysignals.com:\n{}'.format(signals))
-                    [signal_queue.put(signal) for signal in signals]
-                #if signals['count'] > 0:
-                #    print signals
-                #else:
-                #    print 'No new signals at this time, waiting 5 minutes...'
-                time.sleep(301)
-                #time.sleep(10)
+                try:
+                    signals = json.loads(requests.get(self.url, params=params).text)
+                    signals = self.parse(signals)
+                    if signals:
+                        print('Signal received...')
+                        logging.info('Reading cryptoqualitysignals.com:\n{}'.format(signals))
+                        [signal_queue.put(signal) for signal in signals]
+                    #if signals['count'] > 0:
+                    #    print signals
+                    #else:
+                    #    print 'No new signals at this time, waiting 5 minutes...'
+                except Exception as e:
+                    logging.error('Failed retrieving signal:\n{}'.format(e.message))
+                finally:
+                    time.sleep(301)
+                    #time.sleep(10)
 
     def stop_reader(self):
         self.enabled = False
