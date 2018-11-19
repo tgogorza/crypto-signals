@@ -22,11 +22,11 @@ class ThreeCommasOrderCreator(OrderCreator):
         self.api_key = config.THREE_COMMAS_API_KEY
         self.api_secret = config.THREE_COMMAS_API_SECRET
         self.base_url = 'https://3commas.io'
-        self.order_endpoint = b'/public/api/ver1/smart_trades/create_smart_trade'
 
     def place_order(self, order_info, base_amount):
         try:
-            url = '{}/{}'.format(self.base_url, create_endpoint)
+            order_endpoint = b'/public/api/ver1/smart_trades/create_smart_trade'
+            url = '{}/{}'.format(self.base_url, order_endpoint)
             
             accounts = self.get_accounts()
             account = accounts[order_info['exchange']]
@@ -58,14 +58,14 @@ class ThreeCommasOrderCreator(OrderCreator):
             pairs = zip(params.keys(), params.values())
             pairs = ['{}={}'.format(p[0], p[1]) for p in pairs]
             paramstr = '&'.join(pairs)
-            headers = self.create_headers('{}?{}'.format(create_endpoint, paramstr))
+            headers = self.create_headers('{}?{}'.format(order_endpoint, paramstr))
             response = requests.post(url=url, params=params, headers=headers)
             response = json.loads(response.text)
             print('Created Order for {} in {}'.format(params['pair'], order_info['exchange']))
             logging.info('CREATING ORDER:\n{}'.format(params))
             logging.info('ORDER:\n{}'.format(response))
         except Exception as e:
-            logging.error('Failed creating order for {}:\n{}'.format(response['to_currency_display_name'], e.message))
+            logging.error('Failed creating order for {}:\n{}'.format(order_info['coin'], e.message))
         
     def calculate_stop_loss(self, price, target, risk_ratio=1.0/2):
         target_profit = float(target - price) / price
