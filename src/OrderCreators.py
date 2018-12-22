@@ -37,35 +37,36 @@ class ThreeCommasOrderCreator(OrderCreator):
 
             units_to_buy = round(float(base_amount) / float(order_info['ask']), 0)
             if units_to_buy > 0.0:
-                for i in range(1, target_level+1):
-                    target = 'target{}'.format(i)
-                    # If signal has no stop-loss, calculate it (default risk-reward ratio: 2:1)
-                    if 'stop_loss' in order_info and float(order_info['stop_loss']) > 0.0:
-                        stop_loss = float(order_info['stop_loss'])
-                    else:
-                        stop_loss = self.calculate_stop_loss(float(order_info['ask']),
-                                                             float(order_info[target]),
-                                                             risk_ratio=1.0 / 2)
-                    if target in order_info.keys():
-                        params = {
-                            'api_key': self.api_key,
-                            'secret': self.api_secret,
-                            'account_id': account,
-                            'pair': '{}_{}'.format(order_info['currency'], order_info['coin']),
-                            'units_to_buy': units_to_buy,
-                            'buy_price': float(order_info['ask']),
-                            'take_profit_enabled': True,
-                            'take_profit_type': 'classic', # classic / step_sell
-                            'take_profit_price_condition': float(order_info[target]),    # if classic
-                            # 'take_profit_step_orders': [],  # if step_sell ->  [{percent: 50, price: 100, price_method: bid,ask,last}, ...]
-                            'trailing_take_profit': True,
-                            'trailing_take_profit_step': 0.01,
-                            'stop_loss_enabled': True,
-                            'stop_loss_price_condition': stop_loss,
-                            'trailing_stop_loss': True,
-                            'note': '' #order_info
-                        }
-                        self.execute_order(order_endpoint, order_info, params, url)
+                #for i in range(1, target_level+1):
+                # target = 'target{}'.format(i)
+                target = 'target{}'.format(target_level)
+                # If signal has no stop-loss, calculate it (default risk-reward ratio: 2:1)
+                if 'stop_loss' in order_info and float(order_info['stop_loss']) > 0.0:
+                    stop_loss = float(order_info['stop_loss'])
+                else:
+                    stop_loss = self.calculate_stop_loss(float(order_info['ask']),
+                                                         float(order_info[target]),
+                                                         risk_ratio=1.0 / 2)
+                if target in order_info.keys():
+                    params = {
+                        'api_key': self.api_key,
+                        'secret': self.api_secret,
+                        'account_id': account,
+                        'pair': '{}_{}'.format(order_info['currency'], order_info['coin']),
+                        'units_to_buy': units_to_buy,
+                        'buy_price': float(order_info['ask']),
+                        'take_profit_enabled': True,
+                        'take_profit_type': 'classic', # classic / step_sell
+                        'take_profit_price_condition': float(order_info[target]),    # if classic
+                        # 'take_profit_step_orders': [],  # if step_sell ->  [{percent: 50, price: 100, price_method: bid,ask,last}, ...]
+                        'trailing_take_profit': True,
+                        'trailing_take_profit_step': 0.01,
+                        'stop_loss_enabled': True,
+                        'stop_loss_price_condition': stop_loss,
+                        'trailing_stop_loss': True,
+                        'note': '' #order_info
+                    }
+                    self.execute_order(order_endpoint, order_info, params, url)
         except Exception as e:
             logging.error('Failed creating order for {}:\n{}'.format(order_info['coin'], e.message))
 
