@@ -1,8 +1,9 @@
 from multiprocessing import Queue
 from OrderCreators import ThreeCommasOrderCreator
 from SignalReaders import CryptoSignalsReader
-import os, signal
+import signal
 from threading import Thread
+import config
 
 signal_queue = Queue()
 signal_reader = CryptoSignalsReader()
@@ -20,8 +21,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, termination_handler)
     signal_thread.start()
 
-    base_amount = 0.0015
+    base_amount = config.BASE_ORDER_BTC
 
     while execute_service:
         signal = signal_queue.get()
-        order_creator.place_order(signal, base_amount)
+        order_creator.place_order(signal, base_amount, target_level=config.CRYPTO_SIGNALS_TARGET_LEVEL)
