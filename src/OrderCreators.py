@@ -42,13 +42,18 @@ class ThreeCommasOrderCreator(OrderCreator):
                 #for i in range(1, target_level+1):
                 # target = 'target{}'.format(i)
                 target = 'target{}'.format(target_level)
+                current_price = float(order_info['ask'])
                 # If signal has no stop-loss, calculate it (default risk-reward ratio defined in config file)
                 if 'stop_loss' in order_info and float(order_info['stop_loss']) > 0.0:
                     stop_loss = float(order_info['stop_loss'])
                 else:
-                    stop_loss = self.calculate_stop_loss(float(order_info['ask']),
+                    stop_loss = self.calculate_stop_loss(current_price,
                                                          float(order_info[target]),
                                                          risk_ratio=self.risk_reward_ratio)
+                if self.max_stop_loss:
+                    stop_loss_cap = current_price - (current_price * abs(self.max_stop_loss))
+                    stop_loss = max(stop_loss, stop_loss_cap)
+
                 if target in order_info.keys():
                     params = {
                         'api_key': self.api_key,
@@ -86,9 +91,6 @@ class ThreeCommasOrderCreator(OrderCreator):
     def calculate_stop_loss(self, price, target, risk_ratio=1.0/2):
         target_profit = float(target - price) / price
         stop_loss = price - (price * target_profit * risk_ratio)
-        if self.max_stop_loss:
-            stop_loss_cap = price - (price * abs(self.max_stop_loss))
-            stop_loss = max(stop_loss, stop_loss_cap)
         return stop_loss
 
     def get_accounts(self):
