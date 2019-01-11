@@ -61,7 +61,7 @@ class ThreeCommasOrderCreator(OrderCreator):
                         'account_id': account,
                         'pair': '{}_{}'.format(order_info['currency'], order_info['coin']),
                         'units_to_buy': units_to_buy,
-                        'buy_price': float(order_info['ask']),
+                        'buy_price': current_price,
                         'take_profit_enabled': True,
                         'take_profit_type': 'classic', # classic / step_sell
                         'take_profit_price_condition': float(order_info[target]),    # if classic
