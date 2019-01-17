@@ -75,7 +75,7 @@ class ThreeCommasOrderCreator(OrderCreator):
                     }
                     self.execute_order(order_endpoint, order_info, params, url)
         except Exception as e:
-            logging.error('Failed creating order for {}:\n{}'.format(order_info['coin'], e.message))
+            raise ValueError('Failed creating order for {}:\n{}'.format(order_info['coin'], e.message))
 
     def execute_order(self, order_endpoint, order_info, params, url):
         pairs = zip(params.keys(), params.values())
