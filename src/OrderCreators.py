@@ -84,9 +84,12 @@ class ThreeCommasOrderCreator(OrderCreator):
         headers = self.create_headers('{}?{}'.format(order_endpoint, paramstr))
         response = requests.post(url=url, params=params, headers=headers)
         response = json.loads(response.text)
-        print('Created Order for {} in {}'.format(params['pair'], order_info['exchange']))
-        logging.info('CREATING ORDER:\n{}'.format(params))
-        logging.info('ORDER:\n{}'.format(response))
+        if 'error' not in response:
+            print('Created Order for {} in {}'.format(params['pair'], order_info['exchange']))
+            logging.info('CREATED ORDER:\n{}\n'.format(params))
+            logging.info('ORDER:\n{}'.format(response))
+        else:
+            logging.info('FAILED CREATING ORDER:\n{}'.format(response))
 
     def calculate_stop_loss(self, price, target, risk_ratio=1.0/2):
         target_profit = float(target - price) / price
