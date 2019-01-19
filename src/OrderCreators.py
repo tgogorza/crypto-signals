@@ -1,9 +1,8 @@
 import config
 import requests
 import json
-import hmac
-import hashlib
 import logging
+from three_commas_helper import create_headers, get_accounts
 
 logging.basicConfig(filename=config.LOGGING_FILE, level=logging.INFO)
 
@@ -28,10 +27,10 @@ class ThreeCommasOrderCreator(OrderCreator):
 
     def place_order(self, order_info, base_amount, target_level=2):
         try:
-            order_endpoint = b'/public/api/ver1/smart_trades/create_smart_trade'
-            url = '{}/{}'.format(self.base_url, order_endpoint)
+            order_endpoint = '/public/api/ver1/smart_trades/create_smart_trade'
+            url = '{}{}'.format(self.base_url, order_endpoint)
             
-            accounts = self.get_accounts()
+            accounts = get_accounts(self.api_key, self.api_secret)
             account = accounts[order_info['exchange']]
 
             if target_level not in (1, 2, 3):
@@ -71,7 +70,7 @@ class ThreeCommasOrderCreator(OrderCreator):
                         'stop_loss_enabled': True,
                         'stop_loss_price_condition': stop_loss,
                         'trailing_stop_loss': True,
-                        'note': '' #order_info
+                        #'note': '' #order_info
                     }
                     self.execute_order(order_endpoint, order_info, params, url)
         except Exception as e:
@@ -81,8 +80,8 @@ class ThreeCommasOrderCreator(OrderCreator):
         pairs = zip(params.keys(), params.values())
         pairs = ['{}={}'.format(p[0], p[1]) for p in pairs]
         paramstr = '&'.join(pairs)
-        headers = self.create_headers('{}?{}'.format(order_endpoint, paramstr))
-        response = requests.post(url=url, params=params, headers=headers)
+        headers = create_headers('{}?{}'.format(order_endpoint, paramstr), self.api_key, self.api_secret)
+        response = requests.post(url=url, data=params, headers=headers)
         response = json.loads(response.text)
         if 'error' not in response:
             print('Created Order for {} in {}'.format(params['pair'], order_info['exchange']))
@@ -95,25 +94,3 @@ class ThreeCommasOrderCreator(OrderCreator):
         target_profit = float(target - price) / price
         stop_loss = price - (price * target_profit * risk_ratio)
         return stop_loss
-
-    def get_accounts(self):
-        accounts_endpoint = b'/public/api/ver1/accounts'
-        url = '{}{}'.format(self.base_url, accounts_endpoint)        
-        headers = self.create_headers(accounts_endpoint)
-        response = requests.get(url=url, headers=headers)
-        response = json.loads(response.text)
-        accounts = {acc['name'].lower(): acc['id'] for acc in response}
-        return accounts
-
-    def create_headers(self, url):
-        signature = hmac.new(self.api_secret, url, hashlib.sha256)
-        headers = {
-            'APIKEY': self.api_key,
-            'Signature': signature.hexdigest()
-            }
-        return headers
-
-
-
-        
-
