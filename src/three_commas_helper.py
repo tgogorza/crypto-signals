@@ -27,13 +27,13 @@ def get_accounts(api_key, api_secret):
     return accounts
 
 
-def get_finished_trades(api_key, api_secret, account_id=None, limit=999999):
+def get_trades(api_key, api_secret, account_id=None, limit=999999):
     trades_endpoint = '/public/api/ver1/smart_trades'
     url = '{}{}'.format(base_url, trades_endpoint)
     params = {
         'api_key': api_key,
         'secret': api_secret,
-        'scope': 'finished',
+        #'scope': 'finished',
         'limit': limit
     }
     if account_id:
