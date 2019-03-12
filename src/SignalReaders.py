@@ -28,13 +28,14 @@ class SignalReader:
         self.url = ''
         self.enabled = True
         self.name = ''
+        self.query_interval = 301
 
     def parse(self, signal):
         raise NotImplementedError()
 
     def start_reader(self, exchange='', interval=5, signal_queue=None):
         if exchange and signal_queue:
-            print('Started CryptSignal reader for {}'.format(exchange))
+            print('Started {} reader for {}'.format(self.name, exchange))
             while self.enabled: 
                 try:
                     signals = self.query_signal(exchange, interval)
@@ -47,9 +48,9 @@ class SignalReader:
                         # else:
                         #    print 'No new signals at this time, waiting 5 minutes...'
                 except Exception as e:
-                    logging.error('Failed retrieving signal:\n{}'.format(e.message))
+                    logging.error('Failed retrieving signal:\n{}'.format(e.args))
                 finally:
-                    time.sleep(301)
+                    time.sleep(self.query_interval)
                     #time.sleep(10)
 
     def query_signal(self, exchange, interval=None):
@@ -80,38 +81,52 @@ class CryptoSignalsReader(SignalReader):
 class GmailSignalReader(SignalReader):
     def __init__(self):
         SignalReader.__init__(self)
-        self.url = 'https://www.googleapis.com/auth/gmail.readonly'
-        self.creds = self.get_credentials()
-        self.service = build('gmail', 'v1', credentials=self.creds)
+        self.scopes = ['https://www.googleapis.com/auth/gmail.readonly',
+                       'https://www.googleapis.com/auth/gmail.labels',
+                       'https://www.googleapis.com/auth/gmail.modify']
         self.name = 'Gmail Signals'
+        self.query_interval = 60
 
     def query_signal(self, exchange, interval=None):
+        creds = self.get_credentials(self.scopes)
+        service = build('gmail', 'v1', credentials=creds)
+        results = service.users().messages()\
+            .list(userId='me', q='subject:(tradingview alert), newer_than:1d, is:unread ').execute()
+        if results['resultSizeEstimate'] > 0:
+            results = results['messages']
+            message_id = results[0]['id']
+            # message_ids = [r['id'] for r in results]
+            message = service.users().messages().get(userId='me', id=message_id).execute()
+            # messages = [service.users().messages().get(userId='me', id=message_id).execute() for message_id in message_ids]
+            # MARK MESSAGES AS READ
+            service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': ['UNREAD']}).execute()
+            # [service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': ['UNREAD']}).execute() for message_id in message_ids]
+            signals = self.parse([message['snippet']])
+            # signals = self.parse([message['snippet'] for message in messages])
+            return signals
+        return []
 
-        results = self.service.users().messages()\
-            .list(userId='me', q='subject:(tradingview alert), newer_than:1d, is:unread ').execute()['messages']
-        message_id = results[0]['id']
-        message = self.service.users().messages().get(userId='me', id=message_id).execute()
-        # MARK MESSAGE AS READ
-        self.service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': ['UNREAD']}).execute()
-        signal = self.parse(message['snippet'])
-        return [signal]
-
-    def parse(self, signal):
+    def parse(self, signals):
         """
         This function assumes signal with format: i.e. "long btc/usd", "short eth/btc", etc.
-        :param signal:
-        :return: parsed signal dictionary
+        :param signals:
+        :return: list of parsed signals dictionaries
         """
-        signal = signal.split
-        parsed = {
-            'action': signal[5],
-            'pair': signal[6],
-            'target': signal[6].split('/')[0],
-            'base': signal[6].split('/')[1],
-        }
-        return parsed
+        parsed_signals = []
+        for sig in signals:
+            signal = sig.split()
+            parsed = {
+                'action': signal[5],
+                'pair': signal[6],
+                'target': signal[6].split('/')[0],
+                'base': signal[6].split('/')[1],
+                'symbol': signal[6].replace('/', ''),
+                'exchange': signal[7]
+            }
+            parsed_signals.append(parsed)
+        return parsed_signals
 
-    def get_credentials(self):
+    def get_credentials(self, scopes):
         creds = None
         # The file token.pickle stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
@@ -124,8 +139,7 @@ class GmailSignalReader(SignalReader):
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', [self.url])
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', scopes)
                 creds = flow.run_local_server()
             # Save the credentials for the next run
             with open('token.pickle', 'wb') as token:

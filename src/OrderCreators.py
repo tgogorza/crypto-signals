@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 from three_commas_helper import create_headers, get_accounts
+from BinanceOperator import BinanceOperator
 
 logging.basicConfig(filename=config.LOGGING_FILE, level=logging.INFO)
 
@@ -74,7 +75,7 @@ class ThreeCommasOrderCreator(OrderCreator):
                     }
                     self.execute_order(order_endpoint, order_info, params, url)
         except Exception as e:
-            raise ValueError('Failed creating order for {}:\n{}'.format(order_info['coin'], e.message))
+            raise ValueError('Failed creating order for {}:\n{}'.format(order_info['coin'], e.args))
 
     def execute_order(self, order_endpoint, order_info, params, url):
         pairs = zip(params.keys(), params.values())
@@ -94,3 +95,27 @@ class ThreeCommasOrderCreator(OrderCreator):
         target_profit = float(target - price) / price
         stop_loss = price - (price * target_profit * risk_ratio)
         return stop_loss
+
+
+class BinanceOrderCreator:
+    def __init__(self):
+        self.operator = BinanceOperator(config.BINANCE_API_KEY, config.BINANCE_API_SECRET)
+
+    def place_order(self, order_info, base_amount=0):
+        try:
+            response = {}
+            symbol = order_info['symbol']
+            if order_info['action'] == 'long' and self.operator.buying_allowed(symbol):
+                response = self.operator.create_market_buy(symbol, base_amount)
+            elif order_info['action'] == 'short' and self.operator.selling_allowed(symbol):
+                response = self.operator.create_market_sell(symbol)
+            else:
+                response['error'] = '{} action not allowed right now for {}'.format(order_info['action'], symbol)
+            if 'error' not in response:
+                print('Created Order for {} in {}'.format(order_info['symbol'], order_info['exchange']))
+                logging.info('CREATED ORDER:\n{}\n'.format(order_info))
+                logging.info('ORDER:\n{}'.format(response))
+            else:
+                logging.info('FAILED CREATING ORDER:\n{}'.format(response))
+        except Exception as e:
+            raise ValueError('Failed creating order for {}:\n{}'.format(order_info['symbol'], e.message))
